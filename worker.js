@@ -40,6 +40,6 @@ submissionQueue.process(async (job, done) => {
       endedAt: new Date(),
       expireAt: new Date(Date.now() + 10 * 60 * 1000) 
     });
-    done(new Error("Job failed permanently"));
+    done(new Error("Job failed"));
   }
 });
