@@ -1,33 +1,35 @@
-const submissionQueue = require('./config/redisQueue');
-const Submission = require('./models/submission');
-const runCode = require('./runCode');
+const { submissionQueue } = require("./config/redisQueue");
+const Submission          = require("./models/submission");
+const runCode             = require("./runCode");
+
 submissionQueue.process(async (job, done) => {
   const { submissionId, code, language, testcases, limits } = job.data;
 
   try {
-    const verdict = await runCode({ code, language, testcases, limits });
+    const result = await runCode({ language, code, testcases, limits });
 
     const update = {
-      verdict: verdict.status,
-      endedAt: new Date()
+      verdict : result.status,
+      endedAt : new Date(),
     };
 
-    if (verdict.status === "Accepted") {
-      update.totalTimeMs = verdict.totalTimeMs;
-      update.totalMemoryKb = verdict.totalMemoryKb;
+    /* store perf stats on AC */
+    if (result.status === "Accepted") {
+      update.totalTimeMs   = result.totalTimeMs;
+      update.totalMemoryKb = result.totalMemoryKb;
     }
 
-    if (verdict.error) {
-      update.errorMessage = verdict.error;
+    if (result.error) {
+      update.errorMessage = result.error;
     }
 
-    if (verdict.failedTestcase) {
-      const failed = testcases[verdict.failedTestcase - 1];
+    if (result.failedTestcase) {
+      const tc = testcases[result.failedTestcase - 1];
       update.failedTestCase = {
-        input: failed.input,
-        expectedOutput: failed.expectedOutput,
-        actualOutput: verdict.actualOutput,
-        errorType: verdict.status
+        input          : tc.input,
+        expectedOutput : tc.expectedOutput,
+        actualOutput   : result.actualOutput,
+        errorType      : result.status,       // WA, TLE, MLE, RTE
       };
     }
 
@@ -35,11 +37,11 @@ submissionQueue.process(async (job, done) => {
     done();
   } catch (err) {
     await Submission.findByIdAndUpdate(submissionId, {
-      verdict: "System Error",
-      errorMessage: err.message,
-      endedAt: new Date(),
-      expireAt: new Date(Date.now() + 10 * 60 * 1000) 
+      verdict      : "System Error",
+      errorMessage : err.message,
+      endedAt      : new Date(),
+      expireAt     : new Date(Date.now() + 10 * 60 * 1000),
     });
-    done(new Error("Job failed"));
+    done(err);
   }
 });

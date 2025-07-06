@@ -12,6 +12,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB connected");
     require('./worker');
+    require('./executeWorker');
   })
   .catch(err => console.error("MongoDB connection error:", err));
 

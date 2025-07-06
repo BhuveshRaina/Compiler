@@ -7,4 +7,8 @@ const submissionQueue = new Queue('submission', {
   }
 });
 
-module.exports = submissionQueue;
+const runQueue = new Queue('run', {
+  redis: { host: 'localhost', port: 6379 }
+});
+
+module.exports = {submissionQueue,runQueue}
